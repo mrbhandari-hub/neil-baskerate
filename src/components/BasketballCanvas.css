@@ -1,0 +1,43 @@
+.basketball-canvas-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 640px;
+}
+
+.basketball-canvas {
+  background: white;
+  border-radius: 50%;
+  cursor: crosshair;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  aspect-ratio: 1;
+  display: block;
+}
+
+.basketball-canvas:active {
+  cursor: grabbing;
+}
+
+@media (max-width: 768px) {
+  .basketball-canvas-container {
+    padding: 10px;
+  }
+  
+  .basketball-canvas {
+    max-width: 100%;
+  }
+}
+
