@@ -14,15 +14,45 @@ function App() {
   const [clearTrigger, setClearTrigger] = useState(0);
   const canvasRef = useRef(null);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Create a temporary link to download the image
-    const link = document.createElement('a');
-    link.download = 'Rahul Bhandari.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    try {
+      // Convert canvas to blob
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+
+        // Check if Web Share API is available (iOS/Safari/modern browsers)
+        if (navigator.share && navigator.canShare) {
+          const file = new File([blob], 'Rahul Bhandari.png', { type: 'image/png' });
+          
+          // Check if we can share files
+          if (navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: 'My Basketball Design',
+                text: 'Check out my decorated basketball!'
+              });
+              return;
+            } catch (err) {
+              // User cancelled share or error occurred
+              console.log('Share cancelled or failed:', err);
+            }
+          }
+        }
+
+        // Fallback: traditional download for desktop browsers
+        const link = document.createElement('a');
+        link.download = 'Rahul Bhandari.png';
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }, 'image/png');
+    } catch (error) {
+      console.error('Error saving image:', error);
+    }
   };
 
   const handleClear = () => {
