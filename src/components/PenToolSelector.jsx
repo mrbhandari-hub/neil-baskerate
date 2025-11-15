@@ -6,6 +6,7 @@ const tools = [
   { id: 'straight', name: 'Straight Lines', emoji: '📏' },
   { id: 'thick', name: 'Thick', emoji: '🖌️' },
   { id: 'mountain', name: 'Mountain Lines', emoji: '⛰️' },
+  { id: 'eraser', name: 'Eraser', emoji: '🧹' },
 ];
 
 function PenToolSelector({ selectedTool, onToolChange }) {

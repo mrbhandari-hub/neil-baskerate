@@ -5,13 +5,21 @@ function BasketballCanvas({
   selectedColor, 
   selectedTool, 
   isGlitterEnabled,
-  canvasRef 
+  canvasRef,
+  clearTrigger 
 }) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPoint, setLastPoint] = useState(null);
   const glitterParticlesRef = useRef([]);
   const drawingHistoryRef = useRef([]);
   const animationFrameRef = useRef(null);
+
+  // Clear drawing history when clearTrigger changes
+  useEffect(() => {
+    if (clearTrigger > 0) {
+      drawingHistoryRef.current = [];
+    }
+  }, [clearTrigger]);
 
   // Draw basketball base
   const drawBasketball = useCallback((ctx) => {
@@ -121,8 +129,119 @@ function BasketballCanvas({
     };
   }
 
+  function drawBasketballInArea(ctx, x, y, radius) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const ballRadius = Math.min(canvas.width, canvas.height) * 0.4;
+    
+    // Create a clipping path for the eraser area AND the basketball boundary
+    ctx.save();
+    ctx.beginPath();
+    // First clip to eraser area
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.clip();
+    
+    // Second clip to basketball boundary to prevent drawing outside
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, ballRadius, 0, Math.PI * 2);
+    ctx.clip();
+    
+    // First fill with orange to cover any white/transparent areas
+    ctx.fillStyle = '#FF8C00';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw basketball circle outline
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, ballRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#FF8C00';
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw characteristic basketball lines
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    
+    // Vertical line
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY - ballRadius);
+    ctx.lineTo(centerX, centerY + ballRadius);
+    ctx.stroke();
+
+    // Horizontal line
+    ctx.beginPath();
+    ctx.moveTo(centerX - ballRadius, centerY);
+    ctx.lineTo(centerX + ballRadius, centerY);
+    ctx.stroke();
+
+    // Curved lines (simplified)
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, ballRadius, 0, Math.PI);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, ballRadius, Math.PI, Math.PI * 2);
+    ctx.stroke();
+    
+    ctx.restore();
+  }
+
   function drawPoint(ctx, x, y, color, tool, prevPoint = null) {
     if (!isPointInBasketball(x, y)) return;
+
+    // Handle eraser tool separately
+    if (tool === 'eraser') {
+      const eraserRadius = 10;
+      
+      // First, erase the drawing layer using destination-out
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      
+      if (prevPoint && isPointInBasketball(prevPoint.x, prevPoint.y)) {
+        ctx.beginPath();
+        ctx.moveTo(prevPoint.x, prevPoint.y);
+        ctx.lineTo(x, y);
+        ctx.lineWidth = 20;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y, eraserRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      ctx.restore();
+      
+      // Then, restore the basketball base in the erased area using source-over
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      
+      if (prevPoint && isPointInBasketball(prevPoint.x, prevPoint.y)) {
+        // Draw basketball for the line segment
+        const distance = Math.sqrt(
+          Math.pow(x - prevPoint.x, 2) + Math.pow(y - prevPoint.y, 2)
+        );
+        const steps = Math.max(5, Math.floor(distance / 5));
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const px = prevPoint.x + (x - prevPoint.x) * t;
+          const py = prevPoint.y + (y - prevPoint.y) * t;
+          // Only restore basketball if point is within basketball boundary
+          if (isPointInBasketball(px, py)) {
+            drawBasketballInArea(ctx, px, py, eraserRadius);
+          }
+        }
+      } else {
+        drawBasketballInArea(ctx, x, y, eraserRadius);
+      }
+      
+      ctx.restore();
+      return;
+    }
 
     ctx.fillStyle = color;
     ctx.strokeStyle = color;
@@ -230,14 +349,16 @@ function BasketballCanvas({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     
-    // Save to history
-    drawingHistoryRef.current.push({
-      x: point.x,
-      y: point.y,
-      color: selectedColor,
-      tool: selectedTool,
-      lastPoint: null
-    });
+    // Save to history (except for eraser, which is a destructive operation)
+    if (selectedTool !== 'eraser') {
+      drawingHistoryRef.current.push({
+        x: point.x,
+        y: point.y,
+        color: selectedColor,
+        tool: selectedTool,
+        lastPoint: null
+      });
+    }
     
     drawPoint(ctx, point.x, point.y, selectedColor, selectedTool, null);
   }
@@ -254,19 +375,21 @@ function BasketballCanvas({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     
-    // Save to history
-    drawingHistoryRef.current.push({
-      x: point.x,
-      y: point.y,
-      color: selectedColor,
-      tool: selectedTool,
-      lastPoint: lastPoint
-    });
+    // Save to history (except for eraser, which is a destructive operation)
+    if (selectedTool !== 'eraser') {
+      drawingHistoryRef.current.push({
+        x: point.x,
+        y: point.y,
+        color: selectedColor,
+        tool: selectedTool,
+        lastPoint: lastPoint
+      });
+    }
     
     drawPoint(ctx, point.x, point.y, selectedColor, selectedTool, lastPoint);
     
-    // Add glitter particles if enabled
-    if (isGlitterEnabled && Math.random() > 0.7) {
+    // Add glitter particles if enabled (but not when erasing)
+    if (isGlitterEnabled && selectedTool !== 'eraser' && Math.random() > 0.7) {
       glitterParticlesRef.current.push({
         x: point.x,
         y: point.y,
