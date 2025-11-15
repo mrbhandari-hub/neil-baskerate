@@ -1,16 +1,62 @@
-# React + Vite
+# Neil Baskerate - Basketball Drawing App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + Vite application for drawing on a basketball canvas with various tools and features.
 
-Currently, two official plugins are available:
+## 🚀 Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Development
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+### Build
+```bash
+npm run build
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Preview Production Build
+```bash
+npm run preview
+```
 
-## Expanding the ESLint configuration
+## 📦 Deployment
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+This project is ready to deploy! See the deployment guides:
+
+- **For beginners:** [BEGINNER_DEPLOYMENT_GUIDE.md](./BEGINNER_DEPLOYMENT_GUIDE.md) - Complete step-by-step instructions
+- **Quick reference:** [QUICK_START.md](./QUICK_START.md) - Copy-paste commands
+- **All options:** [DEPLOYMENT.md](./DEPLOYMENT.md) - Overview of deployment platforms
+
+### Recommended: Deploy to Vercel
+
+1. Push your code to GitHub
+2. Sign up at [vercel.com](https://vercel.com)
+3. Import your GitHub repository
+4. Click Deploy (no configuration needed!)
+
+The project includes `vercel.json` for optimal deployment settings.
+
+### Helper Script
+
+Use the deployment helper script:
+```bash
+./deploy.sh
+```
+
+This will build your project, commit changes, and push to GitHub.
+
+## 🛠️ Tech Stack
+
+- **React 19** - UI framework
+- **Vite** - Build tool and dev server
+- **ESLint** - Code linting
+
+## 📝 Project Status
+
+✅ Git initialized and configured  
+✅ Build process verified  
+✅ Vercel configuration added  
+✅ Ready for deployment  
+
+Next steps: Create a GitHub repository and connect it to Vercel!
