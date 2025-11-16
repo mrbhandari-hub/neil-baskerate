@@ -9,6 +9,8 @@ import StickersButton from './components/StickersButton';
 import FinishButton from './components/FinishButton';
 import DribbleButtons from './components/DribbleButtons';
 import ShootButton from './components/ShootButton';
+import PersonColorPicker from './components/PersonColorPicker';
+import HoopColorPicker from './components/HoopColorPicker';
 import './App.css';
 
 function App() {
@@ -18,6 +20,8 @@ function App() {
   const [clearTrigger, setClearTrigger] = useState(0);
   const [selectedSticker, setSelectedSticker] = useState(null);
   const [activeDribble, setActiveDribble] = useState(null);
+  const [personColor, setPersonColor] = useState('#FF0000'); // Default red
+  const [hoopColor, setHoopColor] = useState('#FF8800'); // Default orange
   const canvasRef = useRef(null);
 
   const handleSave = async () => {
@@ -153,6 +157,14 @@ function App() {
             onToolChange={setSelectedTool} 
           />
           <StickersButton onStickerSelect={handleStickerSelect} />
+          <PersonColorPicker 
+            selectedColor={personColor}
+            onColorChange={setPersonColor}
+          />
+          <HoopColorPicker 
+            selectedColor={hoopColor}
+            onColorChange={setHoopColor}
+          />
           <DribbleButtons onDribbleStart={handleDribbleStart} />
         </div>
         
@@ -165,6 +177,8 @@ function App() {
             clearTrigger={clearTrigger}
             selectedSticker={selectedSticker}
             activeDribble={activeDribble}
+            personColor={personColor}
+            hoopColor={hoopColor}
           />
           
           <div className="toolbar">

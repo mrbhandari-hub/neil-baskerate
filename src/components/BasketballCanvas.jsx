@@ -8,7 +8,9 @@ function BasketballCanvas({
   canvasRef,
   clearTrigger,
   selectedSticker,
-  activeDribble
+  activeDribble,
+  personColor,
+  hoopColor
 }) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPoint, setLastPoint] = useState(null);
@@ -117,6 +119,213 @@ function BasketballCanvas({
     ctx.arc(centerX, centerY, courtRadius, 0, Math.PI * 2);
     ctx.stroke();
   }, [canvasRef]);
+
+  // Draw basketball hoop
+  const drawHoop = useCallback((ctx) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Position hoop at the top center of the canvas
+    const hoopX = width / 2;
+    const hoopY = height * 0.15; // Near the top
+    const rimRadius = 50;
+    const rimThickness = 8;
+    
+    ctx.save();
+    
+    // Backboard
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    const backboardWidth = 120;
+    const backboardHeight = 80;
+    ctx.fillRect(hoopX - backboardWidth / 2, hoopY - backboardHeight, backboardWidth, backboardHeight);
+    ctx.strokeRect(hoopX - backboardWidth / 2, hoopY - backboardHeight, backboardWidth, backboardHeight);
+    
+    // Backboard support pole
+    ctx.fillStyle = '#CCCCCC';
+    ctx.fillRect(hoopX - 8, 0, 16, hoopY - backboardHeight);
+    
+    // Rim (use selected hoop color)
+    const selectedHoopColor = hoopColor || '#FF8800';
+    ctx.strokeStyle = selectedHoopColor;
+    ctx.fillStyle = selectedHoopColor;
+    ctx.lineWidth = rimThickness;
+    ctx.beginPath();
+    ctx.arc(hoopX, hoopY, rimRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Net (white strings)
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    const netStrings = 12;
+    const netLength = 40;
+    
+    for (let i = 0; i < netStrings; i++) {
+      const angle = (i / netStrings) * Math.PI * 2;
+      const startX = hoopX + Math.cos(angle) * rimRadius;
+      const startY = hoopY + Math.sin(angle) * rimRadius;
+      const endX = startX + Math.cos(angle) * (netLength * 0.3);
+      const endY = startY + netLength;
+      
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+    }
+    
+    // Rim highlight (lighter shade of selected color)
+    // Create a lighter version of the color
+    const highlightColor = selectedHoopColor === '#FFFFFF' ? '#CCCCCC' : selectedHoopColor;
+    ctx.strokeStyle = highlightColor;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(hoopX, hoopY, rimRadius, 0, Math.PI);
+    ctx.stroke();
+    
+    ctx.restore();
+  }, [canvasRef, hoopColor]);
+
+  // Draw person character
+  const drawPerson = useCallback((ctx, pose = 'idle', ballX = 0, ballY = 0, angle = 0) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(canvas.width, canvas.height) * 0.4;
+    
+    // Position person so their upper body is behind the basketball
+    // Person's head should be at the same level or slightly above the ball center
+    const personX = centerX;
+    const personY = centerY + 20; // Position person so ball is in front of their upper body
+    
+    ctx.save();
+    
+    // Define arm and leg positions based on pose
+    let leftArmAngle = -0.4;
+    let rightArmAngle = 0.4;
+    let leftLegAngle = 0.15;
+    let rightLegAngle = -0.15;
+    let bodyLean = 0;
+    
+    if (pose === 'dribbling') {
+      // Dribbling pose - arms alternate up and down
+      leftArmAngle = Math.sin(angle * 2) * 0.6 - 0.4;
+      rightArmAngle = -Math.sin(angle * 2) * 0.6 + 0.4;
+      // Legs slightly bent and moving
+      leftLegAngle = Math.sin(angle * 2) * 0.25 + 0.15;
+      rightLegAngle = -Math.sin(angle * 2) * 0.25 - 0.15;
+    } else if (pose === 'shooting') {
+      // Shooting pose - both arms up
+      leftArmAngle = -1.4;
+      rightArmAngle = -1.2;
+      // Legs in shooting stance (slightly bent)
+      leftLegAngle = 0.25;
+      rightLegAngle = -0.25;
+      bodyLean = -0.1; // Lean back slightly
+    } else if (pose === 'crossover') {
+      // Crossover pose - arms spread wide
+      leftArmAngle = Math.sin(angle * 2) * 1.0 - 0.6;
+      rightArmAngle = -Math.sin(angle * 2) * 1.0 + 0.6;
+      leftLegAngle = Math.sin(angle * 2) * 0.35;
+      rightLegAngle = -Math.sin(angle * 2) * 0.35;
+      bodyLean = Math.sin(angle * 2) * 0.15; // Lean side to side
+    }
+    
+    // Draw person with VERY thick, bright lines for maximum visibility
+    // Use selected person color, or default to red
+    const selectedPersonColor = personColor || '#FF0000';
+    
+    // For white color, use black stroke for visibility
+    if (selectedPersonColor === '#FFFFFF' || selectedPersonColor === '#ffffff') {
+      ctx.strokeStyle = '#000000';
+      ctx.fillStyle = '#FFFFFF';
+    } else {
+      ctx.strokeStyle = selectedPersonColor;
+      ctx.fillStyle = selectedPersonColor;
+    }
+    
+    ctx.lineWidth = 10; // Extra thick lines for maximum visibility
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Apply body lean
+    ctx.translate(personX, personY);
+    ctx.rotate(bodyLean);
+    ctx.translate(-personX, -personY);
+    
+    // Head (MUCH larger, very visible) - positioned above the ball - EXTRA LARGE
+    ctx.beginPath();
+    ctx.arc(personX, personY - 130, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Body (torso) - extends down, ball will be in front of upper body - MUCH TALLER
+    ctx.beginPath();
+    ctx.moveTo(personX, personY - 90);
+    ctx.lineTo(personX, personY + 60);
+    ctx.stroke();
+    
+    // Left arm - positioned so ball can be in front - MUCH LONGER
+    ctx.beginPath();
+    ctx.moveTo(personX, personY - 60);
+    const leftArmEndX = personX + Math.cos(leftArmAngle) * 75;
+    const leftArmEndY = personY - 60 + Math.sin(leftArmAngle) * 75;
+    ctx.lineTo(leftArmEndX, leftArmEndY);
+    ctx.stroke();
+    
+    // Right arm - positioned so ball can be in front - MUCH LONGER
+    ctx.beginPath();
+    ctx.moveTo(personX, personY - 60);
+    const rightArmEndX = personX + Math.cos(rightArmAngle) * 75;
+    const rightArmEndY = personY - 60 + Math.sin(rightArmAngle) * 75;
+    ctx.lineTo(rightArmEndX, rightArmEndY);
+    ctx.stroke();
+    
+    // Left leg - MUCH LONGER
+    ctx.beginPath();
+    ctx.moveTo(personX, personY + 60);
+    const leftLegEndX = personX - 40 + Math.cos(leftLegAngle) * 70;
+    const leftLegEndY = personY + 60 + Math.sin(leftLegAngle) * 70;
+    ctx.lineTo(leftLegEndX, leftLegEndY);
+    ctx.stroke();
+    
+    // Right leg - MUCH LONGER
+    ctx.beginPath();
+    ctx.moveTo(personX, personY + 60);
+    const rightLegEndX = personX + 40 + Math.cos(rightLegAngle) * 70;
+    const rightLegEndY = personY + 60 + Math.sin(rightLegAngle) * 70;
+    ctx.lineTo(rightLegEndX, rightLegEndY);
+    ctx.stroke();
+    
+    // Feet (much larger, very visible) - EXTRA BIG
+    ctx.fillStyle = selectedPersonColor === '#FFFFFF' || selectedPersonColor === '#ffffff' ? '#FFFFFF' : selectedPersonColor;
+    ctx.beginPath();
+    ctx.arc(leftLegEndX, leftLegEndY, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.arc(rightLegEndX, rightLegEndY, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Hands (larger circles at end of arms) - EXTRA BIG
+    ctx.fillStyle = selectedPersonColor === '#FFFFFF' || selectedPersonColor === '#ffffff' ? '#FFFFFF' : selectedPersonColor;
+    ctx.beginPath();
+    ctx.arc(leftArmEndX, leftArmEndY, 16, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.arc(rightArmEndX, rightArmEndY, 16, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+  }, [canvasRef, personColor]);
 
   // Draw basketball base
   const drawBasketball = useCallback((ctx) => {
@@ -605,18 +814,27 @@ function BasketballCanvas({
       let offsetX = 0;
       let offsetY = 0;
       let rotation = 0;
+      let personPose = 'dribbling';
 
+      let scale = 1;
+      
       switch (activeDribble) {
         case 'crossovers':
           // Side-to-side motion
           offsetX = Math.sin(angle * 2) * 15;
           rotation = Math.sin(angle * 2) * 0.1;
+          // Scale down when moving (compressed effect)
+          scale = 1 - Math.abs(Math.sin(angle * 2)) * 0.15;
+          personPose = 'crossover';
           break;
         case 'under-legs':
           // Up and down with slight side motion
           offsetY = Math.sin(angle * 3) * 20;
           offsetX = Math.cos(angle * 3) * 10;
           rotation = angle * 0.2;
+          // Scale down at bottom of bounce
+          scale = 1 - Math.abs(Math.sin(angle * 3)) * 0.2;
+          personPose = 'dribbling';
           break;
         case 'behind-back':
           // Back crossovers - forward then backward motion
@@ -626,16 +844,26 @@ function BasketballCanvas({
           offsetY = Math.abs(Math.sin(angle * 3)) * 8;
           // Rotation follows the forward/backward motion
           rotation = Math.sin(angle * 1.5) * 0.3;
+          // Scale down when moving
+          scale = 1 - Math.abs(Math.sin(angle * 1.5)) * 0.15;
+          personPose = 'crossover';
           break;
         case 'normal':
           // Simple up and down bounce
           offsetY = Math.abs(Math.sin(angle * 4)) * 25;
+          // Scale down at bottom of bounce (compressed ball)
+          scale = 1 - Math.abs(Math.sin(angle * 4)) * 0.25;
+          personPose = 'dribbling';
           break;
       }
+      
+      // Draw person first (behind the ball)
+      drawPerson(ctx, personPose, centerX + offsetX, centerY + offsetY, angle);
 
       // Draw basketball with animation (including drawings and stickers)
       ctx.save();
       ctx.translate(centerX + offsetX, centerY + offsetY);
+      ctx.scale(scale, scale);
       ctx.rotate(rotation);
       ctx.translate(-centerX, -centerY);
       
@@ -695,7 +923,7 @@ function BasketballCanvas({
         cancelAnimationFrame(dribbleAnimationRef.current);
       }
     };
-  }, [activeDribble, canvasRef, redraw, drawBackyard]);
+  }, [activeDribble, canvasRef, redraw, drawBackyard, drawPerson]);
 
   // Handle shooting animation
   useEffect(() => {
@@ -721,13 +949,26 @@ function BasketballCanvas({
         }
 
         const t = shootProgress / shootDuration;
-        const currentY = startY - (startY - endY) * t;
-        const currentX = centerX + Math.sin(t * Math.PI) * 50;
-        const currentScale = 1 - t * 0.5; // Shrink as it goes up
+        // Calculate arc path toward the hoop
+        const hoopX = canvas.width / 2;
+        const hoopY = canvas.height * 0.15;
+        const currentY = startY - (startY - hoopY) * t;
+        const currentX = centerX + (hoopX - centerX) * t + Math.sin(t * Math.PI) * 30;
+        // Start smaller (compressed), then shrink more as it goes up
+        const currentScale = 0.7 - t * 0.3; // Start at 70% size, shrink to 40%
 
         // Clear and draw backyard background
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawBackyard(ctx);
+        
+        // Draw basketball hoop at the top
+        drawHoop(ctx);
+        
+        // Draw person in shooting pose (show longer)
+        if (shootProgress < shootDuration * 0.5) {
+          // Show person during first 50% of animation
+          drawPerson(ctx, 'shooting', centerX, centerY, 0);
+        }
         
         // Draw shooting basketball with all decorations
         ctx.save();
@@ -811,7 +1052,7 @@ function BasketballCanvas({
         cancelAnimationFrame(shootAnimationRef.current);
       }
     };
-  }, [canvasRef, redraw, drawBackyard]);
+  }, [canvasRef, redraw, drawBackyard, drawPerson, drawHoop]);
 
   // Animate glitter particles
   useEffect(() => {
