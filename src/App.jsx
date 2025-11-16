@@ -35,7 +35,7 @@ function App() {
 
         // Check if Web Share API is available (iOS/Safari/modern browsers)
         if (navigator.share && navigator.canShare) {
-          const file = new File([blob], 'Rahul Bhandari.png', { type: 'image/png' });
+          const file = new File([blob], 'Basketball Design.png', { type: 'image/png' });
           
           // Check if we can share files
           if (navigator.canShare({ files: [file] })) {
@@ -55,7 +55,7 @@ function App() {
 
         // Fallback: traditional download for desktop browsers
         const link = document.createElement('a');
-        link.download = 'Rahul Bhandari.png';
+        link.download = 'Basketball Design.png';
         link.href = URL.createObjectURL(blob);
         link.click();
         URL.revokeObjectURL(link.href);
