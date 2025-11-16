@@ -1,0 +1,65 @@
+.dribble-buttons-container {
+  margin: 20px 0;
+}
+
+.dribble-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.dribble-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.dribble-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dribble-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dribble-button.active {
+  background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+  border-color: #fff;
+  box-shadow: 0 0 15px rgba(245, 87, 108, 0.5);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.dribble-emoji {
+  font-size: 24px;
+}
+
+.dribble-name {
+  font-size: 12px;
+  text-align: center;
+}
+

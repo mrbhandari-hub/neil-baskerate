@@ -1,0 +1,46 @@
+.shoot-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.shoot-button:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 16px rgba(250, 112, 154, 0.4);
+  background: linear-gradient(135deg, #fee140 0%, #fa709a 100%);
+}
+
+.shoot-button:active {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.shoot-icon {
+  font-size: 24px;
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.shoot-text {
+  font-weight: 700;
+}
+

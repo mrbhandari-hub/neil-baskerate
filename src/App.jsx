@@ -5,6 +5,10 @@ import PenToolSelector from './components/PenToolSelector';
 import GlitterToggle from './components/GlitterToggle';
 import SaveButton from './components/SaveButton';
 import ClearButton from './components/ClearButton';
+import StickersButton from './components/StickersButton';
+import FinishButton from './components/FinishButton';
+import DribbleButtons from './components/DribbleButtons';
+import ShootButton from './components/ShootButton';
 import './App.css';
 
 function App() {
@@ -12,6 +16,8 @@ function App() {
   const [selectedTool, setSelectedTool] = useState('dots');
   const [isGlitterEnabled, setIsGlitterEnabled] = useState(false);
   const [clearTrigger, setClearTrigger] = useState(0);
+  const [selectedSticker, setSelectedSticker] = useState(null);
+  const [activeDribble, setActiveDribble] = useState(null);
   const canvasRef = useRef(null);
 
   const handleSave = async () => {
@@ -52,6 +58,29 @@ function App() {
       }, 'image/png');
     } catch (error) {
       console.error('Error saving image:', error);
+    }
+  };
+
+  const handleStickerSelect = (sticker) => {
+    setSelectedSticker(sticker);
+    setSelectedTool('sticker');
+  };
+
+  const handleFinish = () => {
+    // Show completion message and save
+    alert('🎉 Great job! Your basketball design is complete!');
+    handleSave();
+  };
+
+  const handleDribbleStart = (dribbleType) => {
+    setActiveDribble(dribbleType);
+  };
+
+  const handleShoot = () => {
+    // Trigger shooting animation
+    if (canvasRef.current) {
+      const event = new CustomEvent('shootBasketball');
+      canvasRef.current.dispatchEvent(event);
     }
   };
 
@@ -108,8 +137,8 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🏀 Basketball Decorator</h1>
-        <p>Decorate your basketball with colors, patterns, and glitter!</p>
+        <h1>🏀 Basketball Decorative</h1>
+        <p>Decorate your basketball with colors, patterns, stickers, and animations!</p>
       </header>
       
       <div className="app-container">
@@ -122,6 +151,8 @@ function App() {
             selectedTool={selectedTool} 
             onToolChange={setSelectedTool} 
           />
+          <StickersButton onStickerSelect={handleStickerSelect} />
+          <DribbleButtons onDribbleStart={handleDribbleStart} />
         </div>
         
         <div className="main-content">
@@ -131,6 +162,8 @@ function App() {
             selectedTool={selectedTool}
             isGlitterEnabled={isGlitterEnabled}
             clearTrigger={clearTrigger}
+            selectedSticker={selectedSticker}
+            activeDribble={activeDribble}
           />
           
           <div className="toolbar">
@@ -138,7 +171,9 @@ function App() {
               isGlitterEnabled={isGlitterEnabled}
               onToggle={() => setIsGlitterEnabled(!isGlitterEnabled)}
             />
+            <ShootButton onShoot={handleShoot} />
             <ClearButton onClear={handleClear} />
+            <FinishButton onFinish={handleFinish} />
             <SaveButton onSave={handleSave} />
           </div>
         </div>

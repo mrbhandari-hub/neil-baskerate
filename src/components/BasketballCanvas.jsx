@@ -6,18 +6,26 @@ function BasketballCanvas({
   selectedTool, 
   isGlitterEnabled,
   canvasRef,
-  clearTrigger 
+  clearTrigger,
+  selectedSticker,
+  activeDribble
 }) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPoint, setLastPoint] = useState(null);
   const glitterParticlesRef = useRef([]);
   const drawingHistoryRef = useRef([]);
   const animationFrameRef = useRef(null);
+  const dribbleAnimationRef = useRef(null);
+  const shootAnimationRef = useRef(null);
+  const stickersRef = useRef([]);
+  const dribbleAngleRef = useRef(0);
+  const ballPositionRef = useRef({ x: 0, y: 0 });
 
   // Clear drawing history when clearTrigger changes
   useEffect(() => {
     if (clearTrigger > 0) {
       drawingHistoryRef.current = [];
+      stickersRef.current = [];
     }
   }, [clearTrigger]);
 
@@ -79,6 +87,16 @@ function BasketballCanvas({
     // Redraw all drawing history
     drawingHistoryRef.current.forEach((drawing) => {
       drawPoint(ctx, drawing.x, drawing.y, drawing.color, drawing.tool, drawing.lastPoint);
+    });
+    
+    // Draw stickers
+    stickersRef.current.forEach((sticker) => {
+      ctx.save();
+      ctx.font = '40px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(sticker.emoji, sticker.x, sticker.y);
+      ctx.restore();
     });
   }, [drawBasketball]);
 
@@ -191,6 +209,19 @@ function BasketballCanvas({
   }
 
   function drawPoint(ctx, x, y, color, tool, prevPoint = null) {
+    // Handle sticker tool
+    if (tool === 'sticker' && selectedSticker) {
+      if (isPointInBasketball(x, y)) {
+        stickersRef.current.push({
+          emoji: selectedSticker.emoji,
+          x: x,
+          y: y
+        });
+        redraw();
+      }
+      return;
+    }
+    
     if (!isPointInBasketball(x, y)) return;
 
     // Handle eraser tool separately
@@ -342,12 +373,18 @@ function BasketballCanvas({
     const point = getCanvasCoordinates(e);
     if (!point || !isPointInBasketball(point.x, point.y)) return;
 
-    setIsDrawing(true);
-    setLastPoint(point);
-    
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    
+    // Handle sticker tool - place on click, don't start drawing
+    if (selectedTool === 'sticker') {
+      drawPoint(ctx, point.x, point.y, selectedColor, selectedTool, null);
+      return;
+    }
+    
+    setIsDrawing(true);
+    setLastPoint(point);
     
     // Save to history (except for eraser, which is a destructive operation)
     if (selectedTool !== 'eraser') {
@@ -416,6 +453,242 @@ function BasketballCanvas({
     setIsDrawing(false);
     setLastPoint(null);
   }
+
+  // Handle dribbling animations
+  useEffect(() => {
+    if (!activeDribble) {
+      if (dribbleAnimationRef.current) {
+        cancelAnimationFrame(dribbleAnimationRef.current);
+        dribbleAnimationRef.current = null;
+      }
+      dribbleAngleRef.current = 0;
+      ballPositionRef.current = { x: 0, y: 0 };
+      redraw();
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(canvas.width, canvas.height) * 0.4;
+
+    function animateDribble() {
+      if (!activeDribble) return;
+
+      redraw();
+      
+      const angle = dribbleAngleRef.current;
+      let offsetX = 0;
+      let offsetY = 0;
+      let rotation = 0;
+
+      switch (activeDribble) {
+        case 'crossovers':
+          // Side-to-side motion
+          offsetX = Math.sin(angle * 2) * 15;
+          rotation = Math.sin(angle * 2) * 0.1;
+          break;
+        case 'under-legs':
+          // Up and down with slight side motion
+          offsetY = Math.sin(angle * 3) * 20;
+          offsetX = Math.cos(angle * 3) * 10;
+          rotation = angle * 0.2;
+          break;
+        case 'behind-back':
+          // Back crossovers - forward then backward motion
+          // Ball goes forward (positive X) then backward (negative X)
+          offsetX = Math.sin(angle * 1.5) * 25;
+          // Slight vertical movement for realism
+          offsetY = Math.abs(Math.sin(angle * 3)) * 8;
+          // Rotation follows the forward/backward motion
+          rotation = Math.sin(angle * 1.5) * 0.3;
+          break;
+        case 'normal':
+          // Simple up and down bounce
+          offsetY = Math.abs(Math.sin(angle * 4)) * 25;
+          break;
+      }
+
+      // Draw basketball with animation (including drawings and stickers)
+      ctx.save();
+      ctx.translate(centerX + offsetX, centerY + offsetY);
+      ctx.rotate(rotation);
+      ctx.translate(-centerX, -centerY);
+      
+      // Draw full basketball with all decorations
+      drawBasketball(ctx);
+      
+      // Redraw all drawings on the animated basketball
+      drawingHistoryRef.current.forEach((drawing) => {
+        drawPoint(ctx, drawing.x, drawing.y, drawing.color, drawing.tool, drawing.lastPoint);
+      });
+      
+      // Draw stickers on the animated basketball
+      stickersRef.current.forEach((sticker) => {
+        ctx.save();
+        ctx.font = '40px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sticker.emoji, sticker.x, sticker.y);
+        ctx.restore();
+      });
+      
+      // Draw basketball lines with motion effect
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 3;
+      
+      // Animated lines
+      const lineOffset = Math.sin(angle * 2) * 2;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY - radius + lineOffset);
+      ctx.lineTo(centerX, centerY + radius - lineOffset);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(centerX - radius - lineOffset, centerY);
+      ctx.lineTo(centerX + radius + lineOffset, centerY);
+      ctx.stroke();
+      
+      // Curved lines
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, Math.PI, Math.PI * 2);
+      ctx.stroke();
+      
+      ctx.restore();
+
+      dribbleAngleRef.current += 0.1;
+      dribbleAnimationRef.current = requestAnimationFrame(animateDribble);
+    }
+
+    dribbleAnimationRef.current = requestAnimationFrame(animateDribble);
+
+    return () => {
+      if (dribbleAnimationRef.current) {
+        cancelAnimationFrame(dribbleAnimationRef.current);
+      }
+    };
+  }, [activeDribble, canvasRef, redraw]);
+
+  // Handle shooting animation
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleShoot = () => {
+      const ctx = canvas.getContext('2d');
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(canvas.width, canvas.height) * 0.4;
+      
+      let shootProgress = 0;
+      const shootDuration = 60; // frames
+      const startY = centerY;
+      const endY = -100; // Shoot off screen
+      const arcHeight = 150;
+
+      function animateShoot() {
+        if (shootProgress >= shootDuration) {
+          redraw();
+          return;
+        }
+
+        const t = shootProgress / shootDuration;
+        const currentY = startY - (startY - endY) * t;
+        const currentX = centerX + Math.sin(t * Math.PI) * 50;
+        const currentScale = 1 - t * 0.5; // Shrink as it goes up
+
+        // Clear and redraw background (without the basketball)
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw shooting basketball with all decorations
+        ctx.save();
+        ctx.translate(currentX, currentY);
+        ctx.scale(currentScale, currentScale);
+        ctx.translate(-centerX, -centerY);
+        
+        // Draw basketball base
+        drawBasketball(ctx);
+        
+        // Draw all drawings on the shooting basketball
+        drawingHistoryRef.current.forEach((drawing) => {
+          drawPoint(ctx, drawing.x, drawing.y, drawing.color, drawing.tool, drawing.lastPoint);
+        });
+        
+        // Draw stickers on the shooting basketball
+        stickersRef.current.forEach((sticker) => {
+          ctx.save();
+          ctx.font = '40px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(sticker.emoji, sticker.x, sticker.y);
+          ctx.restore();
+        });
+        
+        // Draw basketball lines
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY - radius);
+        ctx.lineTo(centerX, centerY + radius);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(centerX - radius, centerY);
+        ctx.lineTo(centerX + radius, centerY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, Math.PI, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.restore();
+        
+        // Draw shooting trail (comet effect)
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 140, 0, 0.3)';
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(currentX, currentY + radius * currentScale);
+        ctx.lineTo(currentX, currentY + radius * currentScale + 30);
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw comet trail
+        for (let i = 0; i < 5; i++) {
+          const trailY = currentY + 20 + i * 10;
+          const trailX = currentX + Math.sin(t * Math.PI + i) * 5;
+          ctx.save();
+          ctx.globalAlpha = 0.5 - i * 0.1;
+          ctx.fillStyle = '#FFD700';
+          ctx.beginPath();
+          ctx.arc(trailX, trailY, 5 - i, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        shootProgress++;
+        shootAnimationRef.current = requestAnimationFrame(animateShoot);
+      }
+
+      shootAnimationRef.current = requestAnimationFrame(animateShoot);
+    };
+
+    canvas.addEventListener('shootBasketball', handleShoot);
+
+    return () => {
+      canvas.removeEventListener('shootBasketball', handleShoot);
+      if (shootAnimationRef.current) {
+        cancelAnimationFrame(shootAnimationRef.current);
+      }
+    };
+  }, [canvasRef, redraw]);
 
   // Animate glitter particles
   useEffect(() => {
