@@ -21,13 +21,102 @@ function BasketballCanvas({
   const dribbleAngleRef = useRef(0);
   const ballPositionRef = useRef({ x: 0, y: 0 });
 
-  // Clear drawing history when clearTrigger changes
-  useEffect(() => {
-    if (clearTrigger > 0) {
-      drawingHistoryRef.current = [];
-      stickersRef.current = [];
+  // Draw backyard background
+  const drawBackyard = useCallback((ctx) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Sky gradient
+    const skyGradient = ctx.createLinearGradient(0, 0, 0, height * 0.6);
+    skyGradient.addColorStop(0, '#87CEEB'); // Sky blue
+    skyGradient.addColorStop(1, '#E0F6FF'); // Light blue
+    ctx.fillStyle = skyGradient;
+    ctx.fillRect(0, 0, width, height * 0.6);
+    
+    // Grass
+    const grassGradient = ctx.createLinearGradient(0, height * 0.6, 0, height);
+    grassGradient.addColorStop(0, '#7CB342'); // Green
+    grassGradient.addColorStop(1, '#558B2F'); // Darker green
+    ctx.fillStyle = grassGradient;
+    ctx.fillRect(0, height * 0.6, width, height * 0.4);
+    
+    // Draw grass texture (simple lines)
+    ctx.strokeStyle = '#689F38';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < width; i += 15) {
+      const offsetX = (i % 30) - 5; // Deterministic offset instead of random
+      const offsetY = 5 + ((i % 20) / 4);
+      ctx.beginPath();
+      ctx.moveTo(i, height * 0.6);
+      ctx.lineTo(i + offsetX, height * 0.6 + offsetY);
+      ctx.stroke();
     }
-  }, [clearTrigger]);
+    
+    // Fence in background
+    ctx.strokeStyle = '#8D6E63';
+    ctx.fillStyle = '#8D6E63';
+    ctx.lineWidth = 3;
+    const fenceY = height * 0.3;
+    const fenceHeight = height * 0.3;
+    
+    // Fence posts
+    for (let i = 0; i < width; i += 40) {
+      ctx.fillRect(i, fenceY, 4, fenceHeight);
+    }
+    
+    // Fence horizontal boards
+    for (let boardY = 0; boardY < 3; boardY++) {
+      ctx.beginPath();
+      ctx.moveTo(0, fenceY + (fenceHeight / 4) * (boardY + 1));
+      ctx.lineTo(width, fenceY + (fenceHeight / 4) * (boardY + 1));
+      ctx.stroke();
+    }
+    
+    // Simple trees/shrubs in background
+    ctx.fillStyle = '#2E7D32';
+    for (let i = 0; i < 3; i++) {
+      const treeX = (width / 4) * (i + 1);
+      const treeY = height * 0.5;
+      // Tree trunk
+      ctx.fillStyle = '#5D4037';
+      ctx.fillRect(treeX - 5, treeY, 10, 30);
+      // Tree top
+      ctx.fillStyle = '#2E7D32';
+      ctx.beginPath();
+      ctx.arc(treeX, treeY, 25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Basketball court/ground area (circular area)
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const courtRadius = Math.min(width, height) * 0.45;
+    
+    // Court shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.beginPath();
+    ctx.arc(centerX, centerY + 5, courtRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Court surface (concrete/asphalt)
+    const courtGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, courtRadius);
+    courtGradient.addColorStop(0, '#E0E0E0');
+    courtGradient.addColorStop(1, '#BDBDBD');
+    ctx.fillStyle = courtGradient;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, courtRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Court border
+    ctx.strokeStyle = '#757575';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, courtRadius, 0, Math.PI * 2);
+    ctx.stroke();
+  }, [canvasRef]);
 
   // Draw basketball base
   const drawBasketball = useCallback((ctx) => {
@@ -73,6 +162,22 @@ function BasketballCanvas({
     ctx.stroke();
   }, [canvasRef]);
 
+  // Clear drawing history when clearTrigger changes
+  useEffect(() => {
+    if (clearTrigger > 0) {
+      drawingHistoryRef.current = [];
+      stickersRef.current = [];
+      // Redraw with clean state
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackyard(ctx);
+        drawBasketball(ctx);
+      }
+    }
+  }, [clearTrigger, drawBackyard, drawBasketball]);
+
   // Redraw everything
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -80,6 +185,9 @@ function BasketballCanvas({
     
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw backyard background first
+    drawBackyard(ctx);
     
     // Draw basketball base
     drawBasketball(ctx);
@@ -98,16 +206,28 @@ function BasketballCanvas({
       ctx.fillText(sticker.emoji, sticker.x, sticker.y);
       ctx.restore();
     });
-  }, [drawBasketball]);
+  }, [drawBasketball, drawBackyard]);
 
   // Initialize canvas
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.error('Canvas ref is null');
+      return;
+    }
     
-    const ctx = canvas.getContext('2d');
-    drawBasketball(ctx);
-  }, [drawBasketball]);
+    try {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        console.error('Could not get 2d context');
+        return;
+      }
+      drawBackyard(ctx);
+      drawBasketball(ctx);
+    } catch (error) {
+      console.error('Error initializing canvas:', error);
+    }
+  }, [drawBasketball, drawBackyard]);
 
   // Check if point is inside basketball circle
   function isPointInBasketball(x, y) {
@@ -474,12 +594,14 @@ function BasketballCanvas({
     const centerY = canvas.height / 2;
     const radius = Math.min(canvas.width, canvas.height) * 0.4;
 
-    function animateDribble() {
-      if (!activeDribble) return;
+      function animateDribble() {
+        if (!activeDribble) return;
 
-      redraw();
-      
-      const angle = dribbleAngleRef.current;
+        // Clear and draw background
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackyard(ctx);
+        
+        const angle = dribbleAngleRef.current;
       let offsetX = 0;
       let offsetY = 0;
       let rotation = 0;
@@ -573,7 +695,7 @@ function BasketballCanvas({
         cancelAnimationFrame(dribbleAnimationRef.current);
       }
     };
-  }, [activeDribble, canvasRef, redraw]);
+  }, [activeDribble, canvasRef, redraw, drawBackyard]);
 
   // Handle shooting animation
   useEffect(() => {
@@ -603,8 +725,9 @@ function BasketballCanvas({
         const currentX = centerX + Math.sin(t * Math.PI) * 50;
         const currentScale = 1 - t * 0.5; // Shrink as it goes up
 
-        // Clear and redraw background (without the basketball)
+        // Clear and draw backyard background
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackyard(ctx);
         
         // Draw shooting basketball with all decorations
         ctx.save();
@@ -683,12 +806,12 @@ function BasketballCanvas({
     canvas.addEventListener('shootBasketball', handleShoot);
 
     return () => {
-      canvas.removeEventListener('shootBasketball', handleShoot);
+        canvas.removeEventListener('shootBasketball', handleShoot);
       if (shootAnimationRef.current) {
         cancelAnimationFrame(shootAnimationRef.current);
       }
     };
-  }, [canvasRef, redraw]);
+  }, [canvasRef, redraw, drawBackyard]);
 
   // Animate glitter particles
   useEffect(() => {

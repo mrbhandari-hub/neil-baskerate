@@ -140,6 +140,7 @@ function App() {
         <h1>🏀 Basketball Decorative</h1>
         <p>Decorate your basketball with colors, patterns, stickers, and animations!</p>
       </header>
+      {!canvasRef.current && <div style={{padding: '20px', color: 'red'}}>Loading canvas...</div>}
       
       <div className="app-container">
         <div className="sidebar">
